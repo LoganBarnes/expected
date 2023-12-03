@@ -1289,19 +1289,27 @@ public:
 
 #if defined(TL_EXPECTED_CXX14) && !defined(TL_EXPECTED_GCC49) &&               \
     !defined(TL_EXPECTED_GCC54) && !defined(TL_EXPECTED_GCC55)
-  template <class F, class... Args> TL_EXPECTED_11_CONSTEXPR auto and_then(F &&f, Args&&...args) & {
-    return and_then_impl(*this, std::forward<F>(f), std::forward<Args>(args)...);
+  template <class F, class... Args>
+  TL_EXPECTED_11_CONSTEXPR auto and_then(F &&f, Args &&...args) & {
+    return and_then_impl(*this, std::forward<F>(f),
+                         std::forward<Args>(args)...);
   }
-  template <class F, class... Args> TL_EXPECTED_11_CONSTEXPR auto and_then(F &&f, Args&&...args) && {
-    return and_then_impl(std::move(*this), std::forward<F>(f), std::forward<Args>(args)...);
+  template <class F, class... Args>
+  TL_EXPECTED_11_CONSTEXPR auto and_then(F &&f, Args &&...args) && {
+    return and_then_impl(std::move(*this), std::forward<F>(f),
+                         std::forward<Args>(args)...);
   }
-  template <class F, class... Args> constexpr auto and_then(F &&f, Args&&...args) const & {
-    return and_then_impl(*this, std::forward<F>(f), std::forward<Args>(args)...);
+  template <class F, class... Args>
+  constexpr auto and_then(F &&f, Args &&...args) const & {
+    return and_then_impl(*this, std::forward<F>(f),
+                         std::forward<Args>(args)...);
   }
 
 #ifndef TL_EXPECTED_NO_CONSTRR
-  template <class F, class... Args> constexpr auto and_then(F &&f, Args&&...args) const && {
-    return and_then_impl(std::move(*this), std::forward<F>(f), std::forward<Args>(args)...);
+  template <class F, class... Args>
+  constexpr auto and_then(F &&f, Args &&...args) const && {
+    return and_then_impl(std::move(*this), std::forward<F>(f),
+                         std::forward<Args>(args)...);
   }
 #endif
 
@@ -2047,28 +2055,34 @@ template <class Exp> using err_t = typename detail::decay_t<Exp>::error_type;
 template <class Exp, class Ret> using ret_t = expected<Ret, err_t<Exp>>;
 
 #ifdef TL_EXPECTED_CXX14
-template <class Exp, class F,
+template <class Exp,
+          class F,
           detail::enable_if_t<!std::is_void<exp_t<Exp>>::value> * = nullptr,
-          class Ret = decltype(detail::invoke(std::declval<F>(),
-                                              *std::declval<Exp>())),
           class... Args>
-constexpr auto and_then_impl(Exp &&exp, F &&f, Args&&...args) {
+constexpr auto and_then_impl(Exp &&exp, F &&f, Args &&...args) {
+  using Ret = decltype(std::invoke(std::declval<F>(),    //
+                                   *std::declval<Exp>(), //
+                                   std::declval<Args>()...));
   static_assert(detail::is_expected<Ret>::value, "F must return an expected");
 
   return exp.has_value()
-             ? detail::invoke(std::forward<F>(f), *std::forward<Exp>(exp), std::forward<Args>(args)...)
+             ? std::invoke(std::forward<F>(f), *std::forward<Exp>(exp),
+                           std::forward<Args>(args)...)
              : Ret(unexpect, std::forward<Exp>(exp).error());
 }
 
-template <class Exp, class F,
+template <class Exp,
+          class F,
           detail::enable_if_t<std::is_void<exp_t<Exp>>::value> * = nullptr,
-          class Ret = decltype(detail::invoke(std::declval<F>())),
           class... Args>
-constexpr auto and_then_impl(Exp &&exp, F &&f, Args&&...args) {
+constexpr auto and_then_impl(Exp &&exp, F &&f, Args &&...args) {
+  using Ret = decltype(std::invoke(std::declval<F>(), //
+                                   std::declval<Args>()...));
   static_assert(detail::is_expected<Ret>::value, "F must return an expected");
 
-  return exp.has_value() ? detail::invoke(std::forward<F>(f), std::forward<Args>(args)...)
-                         : Ret(unexpect, std::forward<Exp>(exp).error());
+  return exp.has_value()
+             ? std::invoke(std::forward<F>(f), std::forward<Args>(args)...)
+             : Ret(unexpect, std::forward<Exp>(exp).error());
 }
 #else
 template <class> struct TC;
